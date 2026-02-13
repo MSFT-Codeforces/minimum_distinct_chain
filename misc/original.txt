@@ -1,0 +1,103 @@
+**Problem Statement**
+You are given a string \(s\) of length \(n\), where each character is either `<` or `>`.
+
+An array \(a\) of length \(n+1\) is called **compatible** with \(s\) if for every \(i\) from \(1\) to \(n\):
+
+- \(s_i = \texttt{<}\) if and only if \(a_i < a_{i+1}\);
+- \(s_i = \texttt{>}\) if and only if \(a_i > a_{i+1}\).
+
+For example, the array \([1,2,5,4,2]\) is compatible with the string `<<>>`. Another compatible array is \([13,37,42,37,13]\).
+
+The **cost** of an array is the number of distinct values appearing in it.  
+For instance, the cost of \([1,2,5,4,2]\) is \(4\), and the cost of \([13,37,42,37,13]\) is \(3\).
+
+For each test case, compute the minimum possible cost among all arrays compatible with the given string \(s\).
+
+**Input Format**
+The first line contains an integer \(t\) (\(1 \le t \le 500\)) — the number of test cases.
+
+Each test case consists of two lines:
+- An integer \(n\) (\(1 \le n \le 100\)).
+- A string \(s\) of length \(n\), consisting only of characters `<` and `>`.
+
+**Output Format**
+For each test case, output one integer — the minimum cost among all arrays compatible with \(s\).
+
+**Examples**
+Sample Input:
+```
+4
+4
+<<>>
+4
+>><<
+5
+>>>>>
+7
+<><><><
+```
+
+Sample Output:
+```
+3
+3
+6
+2
+```
+
+**Editorial**
+Consider any maximal contiguous segment in \(s\) consisting of the same character.
+
+- If we have a segment of \(k\) consecutive `<`, then we require
+  \[
+  a_i < a_{i+1} < \dots < a_{i+k},
+  \]
+  which forces at least \(k+1\) distinct values in that part of the array.
+- Similarly, \(k\) consecutive `>` also forces at least \(k+1\) distinct values.
+
+Therefore, if \(m\) is the maximum length of a contiguous segment of equal characters in \(s\), then the answer is at least \(m+1\).
+
+It turns out this lower bound is achievable. Use only the integers \(\{0,1,\dots,m\}\) and build the array from left to right. When deciding the next value:
+- if the next sign is `>`, choose the largest value still compatible with making a decrease;
+- if the next sign is `<`, choose the smallest value still compatible with making an increase.
+
+Intuitively, whenever a new run of equal signs starts, the current value can be set to an extreme (either \(0\) or \(m\)), so you always have enough “room” to increase (for `<`) or decrease (for `>`) up to \(m\) times without needing values outside \([0,m]\).
+
+Thus the minimum cost equals:
+\[
+\boxed{m+1}
+\]
+So the task reduces to finding the longest contiguous run of identical characters in \(s\), then printing that length plus one.
+
+**Code**
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        cin >> n;
+        string s;
+        cin >> s;
+
+        int c = 1;      // current run length
+        int ans = 2;    // minimum possible is always at least 2 (since n >= 1)
+        for (int j = 1; j < n; j++) {
+            if (s[j] == s[j - 1]) {
+                c++;
+                ans = max(ans, c + 1);
+            } else {
+                c = 1;
+            }
+        }
+        cout << ans << "\n";
+    }
+    return 0;
+}
+```

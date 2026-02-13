@@ -1,0 +1,342 @@
+**1. Problem Understanding**
+
+For each test case, we must count integer arrays $a_1,a_2,\dots,a_{n+1}$ with $1 \le a_i \le K$ such that for every $i$:
+
+- if $s_i=\texttt{<}$ then $a_i<a_{i+1}$
+- if $s_i=\texttt{>}$ then $a_i>a_{i+1}$
+
+The **cost** of an array is the number of distinct values appearing in it. Let $c_{\min}$ be the minimum cost among all valid arrays. The task is to output the number of valid arrays with cost exactly $c_{\min}$ modulo $10^9+7$ (or $0$ if no valid array exists).
+
+Key observation for $c_{\min}$:
+- A run of $m$ consecutive `"<"` forces a strictly increasing segment of length $m+1$, hence at least $m+1$ distinct values (same for `">"`).
+- Let $m$ be the maximum run length in $s$. Then $c_{\min}=d=m+1$.
+- If $K<d$, it is impossible to realize $d$ distinct values in $[1,K]$, so the answer is $0$.
+
+---
+
+**2. Optimal Approach**
+
+**Step 1: Compute the minimum distinct count $d$**
+Scan $s$ to find the maximum length of a contiguous run of identical characters, call it $m$, then set $d=m+1$. If $K<d$, output $0$.
+
+**Step 2: Split counting into “choose values” and “rank patterns”**
+Any minimum-cost array uses exactly $d$ distinct brightness levels from $[1,K]$.
+
+- Choose which $d$ brightness levels are used: $\binom{K}{d}$ ways.
+- Sort them as $x_1<x_2<\dots<x_d$, and represent the array by ranks $r_i \in \{1,\dots,d\}$ where $a_i=x_{r_i}$.
+
+Because constraints are only strict comparisons between neighbors, validity depends only on the rank array, not the actual $x_j$ values. Therefore:
+$$
+\text{answer}=\binom{K}{d}\cdot g(d)\pmod{10^9+7}
+$$
+where $g(d)$ is the number of valid rank arrays over $\{1,\dots,d\}$ that use all ranks at least once.
+
+**Step 3: Use inclusion–exclusion to enforce “all ranks used”**
+Let $f(M)$ be the number of valid rank arrays over alphabet $\{1,\dots,M\}$ (allowing unused symbols). Then:
+$$
+g(d)=\sum_{missing=0}^{d}(-1)^{missing}\binom{d}{missing}f(d-missing)
+$$
+with $f(0)=0$.
+
+**Step 4: Compute each $f(M)$ with DP in $O(nM)$**
+For fixed $M$, maintain `waysEndingWithRank[rank]` for the current prefix, and update using prefix sums for `"<"` and suffix sums for `">"`. This gives $f(M)$ in $O(nM)$, and computing all $f(1..d)$ takes $O(nd^2)$.
+
+**Step 5: Compute $\binom{K}{d}$ for large $K$, small $d$**
+Since $K<10^9+7$ and $d \le 251$:
+$$
+\binom{K}{d}=\frac{K(K-1)\cdots(K-d+1)}{d!}\pmod{10^9+7}
+$$
+using a modular inverse of $d!$.
+
+---
+
+**3. Code**
+```cpp
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+
+/**
+ * @brief Counts the number of valid arrays with minimum number of distinct values.
+ */
+class MinimumDistinctChainSolver {
+public:
+    static constexpr long long kMod = 1000000007LL;
+
+    /**
+     * @brief Computes base^exponent modulo kMod.
+     *
+     * @param base The base value.
+     * @param exponent The exponent value (non-negative).
+     * @return The value of base^exponent modulo kMod.
+     */
+    static long long modPow(long long base, long long exponent) {
+        long long result = 1 % kMod;
+        base %= kMod;
+        while (exponent > 0) {
+            if ((exponent & 1LL) != 0) {
+                result = (result * base) % kMod;
+            }
+            base = (base * base) % kMod;
+            exponent >>= 1LL;
+        }
+        return result;
+    }
+
+    /**
+     * @brief Computes modular inverse of value modulo kMod (kMod is prime).
+     *
+     * @param value The value to invert (must be non-zero modulo kMod).
+     * @return The modular inverse of value modulo kMod.
+     */
+    static long long modInverse(long long value) {
+        return modPow(value, kMod - 2);
+    }
+
+    /**
+     * @brief Builds factorial and inverse factorial arrays up to maxValue.
+     *
+     * @param maxValue The maximum factorial index to compute.
+     * @param factorial Output vector where factorial[x] = x! modulo kMod.
+     * @param inverseFactorial Output vector where inverseFactorial[x] = (x!)^{-1} modulo kMod.
+     */
+    static void buildFactorials(int maxValue, std::vector<long long>& factorial, std::vector<long long>& inverseFactorial) {
+        factorial.assign(maxValue + 1, 1LL);
+        inverseFactorial.assign(maxValue + 1, 1LL);
+
+        for (int valueIndex = 1; valueIndex <= maxValue; ++valueIndex) {
+            factorial[valueIndex] = (factorial[valueIndex - 1] * valueIndex) % kMod;
+        }
+
+        inverseFactorial[maxValue] = modInverse(factorial[maxValue]);
+        for (int valueIndex = maxValue; valueIndex >= 1; --valueIndex) {
+            inverseFactorial[valueIndex - 1] = (inverseFactorial[valueIndex] * valueIndex) % kMod;
+        }
+    }
+
+    /**
+     * @brief Computes the minimum number of distinct values required by the pattern.
+     *
+     * @param pattern The inequality pattern string of length n.
+     * @return The value d = (maximum run length in pattern) + 1.
+     */
+    static int computeMinimumDistinctRequired(const std::string& pattern) {
+        if (pattern.empty()) {
+            return 1;
+        }
+
+        int bestRunLength = 1;
+        int currentRunLength = 1;
+
+        for (int positionIndex = 1; positionIndex < static_cast<int>(pattern.size()); ++positionIndex) {
+            if (pattern[positionIndex] == pattern[positionIndex - 1]) {
+                ++currentRunLength;
+                bestRunLength = std::max(bestRunLength, currentRunLength);
+            } else {
+                currentRunLength = 1;
+            }
+        }
+
+        return bestRunLength + 1;
+    }
+
+    /**
+     * @brief Counts valid rank arrays over alphabet {1..alphabetSize}, allowing unused ranks.
+     *
+     * @param pattern The inequality pattern string.
+     * @param alphabetSize The size M of the rank alphabet.
+     * @return f(M) modulo kMod.
+     */
+    static long long countValidRankArraysAllowUnused(const std::string& pattern, int alphabetSize) {
+        if (alphabetSize <= 0) {
+            return 0;
+        }
+
+        std::vector<long long> waysEndingWithRank(alphabetSize + 1, 0LL);
+        std::vector<long long> nextWaysEndingWithRank(alphabetSize + 1, 0LL);
+
+        for (int rankValue = 1; rankValue <= alphabetSize; ++rankValue) {
+            waysEndingWithRank[rankValue] = 1;
+        }
+
+        for (char inequalitySymbol : pattern) {
+            if (inequalitySymbol == '<') {
+                long long runningPrefixSum = 0;
+                for (int rankValue = 1; rankValue <= alphabetSize; ++rankValue) {
+                    nextWaysEndingWithRank[rankValue] = runningPrefixSum;
+                    runningPrefixSum += waysEndingWithRank[rankValue];
+                    if (runningPrefixSum >= kMod) {
+                        runningPrefixSum -= kMod;
+                    }
+                }
+            } else {
+                long long runningSuffixSum = 0;
+                for (int rankValue = alphabetSize; rankValue >= 1; --rankValue) {
+                    nextWaysEndingWithRank[rankValue] = runningSuffixSum;
+                    runningSuffixSum += waysEndingWithRank[rankValue];
+                    if (runningSuffixSum >= kMod) {
+                        runningSuffixSum -= kMod;
+                    }
+                }
+            }
+            waysEndingWithRank.swap(nextWaysEndingWithRank);
+        }
+
+        long long totalWays = 0;
+        for (int rankValue = 1; rankValue <= alphabetSize; ++rankValue) {
+            totalWays += waysEndingWithRank[rankValue];
+            if (totalWays >= kMod) {
+                totalWays -= kMod;
+            }
+        }
+        return totalWays;
+    }
+
+    /**
+     * @brief Computes C(largeNumber, smallK) modulo kMod for largeNumber < kMod and smallK small.
+     *
+     * @param largeNumber The n in C(n, k).
+     * @param smallK The k in C(n, k).
+     * @param inverseFactorial Precomputed inverse factorials up to smallK.
+     * @return The value C(largeNumber, smallK) modulo kMod.
+     */
+    static long long computeBinomialLargeNSmallK(long long largeNumber, int smallK, const std::vector<long long>& inverseFactorial) {
+        if (smallK < 0 || largeNumber < smallK) {
+            return 0;
+        }
+
+        long long numeratorProduct = 1;
+        for (int termIndex = 0; termIndex < smallK; ++termIndex) {
+            numeratorProduct = (numeratorProduct * (largeNumber - termIndex)) % kMod;
+        }
+        return (numeratorProduct * inverseFactorial[smallK]) % kMod;
+    }
+};
+
+/**
+ * @brief Program entry point. Reads input, solves each test case, prints answers.
+ *
+ * @return Exit status code.
+ */
+int main() {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+
+    int testCaseCount = 0;
+    std::cin >> testCaseCount;
+
+    while (testCaseCount-- > 0) {
+        int patternLength = 0;
+        long long maxBrightness = 0;
+        std::cin >> patternLength >> maxBrightness;
+
+        std::string pattern;
+        std::cin >> pattern;
+
+        if (static_cast<int>(pattern.size()) != patternLength) {
+            patternLength = static_cast<int>(pattern.size());
+        }
+
+        const int minimumDistinctRequired = MinimumDistinctChainSolver::computeMinimumDistinctRequired(pattern);
+
+        if (maxBrightness < minimumDistinctRequired) {
+            std::cout << 0 << "\n";
+            continue;
+        }
+
+        std::vector<long long> factorial;
+        std::vector<long long> inverseFactorial;
+        MinimumDistinctChainSolver::buildFactorials(minimumDistinctRequired, factorial, inverseFactorial);
+
+        auto chooseFromDistinctCount = [&](int chooseCount) -> long long {
+            return factorial[minimumDistinctRequired]
+                * inverseFactorial[chooseCount] % MinimumDistinctChainSolver::kMod
+                * inverseFactorial[minimumDistinctRequired - chooseCount] % MinimumDistinctChainSolver::kMod;
+        };
+
+        std::vector<long long> validCountAllowUnused(minimumDistinctRequired + 1, 0LL);
+        for (int alphabetSize = 1; alphabetSize <= minimumDistinctRequired; ++alphabetSize) {
+            validCountAllowUnused[alphabetSize] =
+                MinimumDistinctChainSolver::countValidRankArraysAllowUnused(pattern, alphabetSize);
+        }
+
+        long long validCountUseAllSymbols = 0;
+        for (int missingSymbolCount = 0; missingSymbolCount <= minimumDistinctRequired; ++missingSymbolCount) {
+            const int remainingAlphabetSize = minimumDistinctRequired - missingSymbolCount;
+            const long long inclusionExclusionTerm =
+                chooseFromDistinctCount(missingSymbolCount)
+                * validCountAllowUnused[remainingAlphabetSize] % MinimumDistinctChainSolver::kMod;
+
+            if ((missingSymbolCount & 1) != 0) {
+                validCountUseAllSymbols -= inclusionExclusionTerm;
+                if (validCountUseAllSymbols < 0) {
+                    validCountUseAllSymbols += MinimumDistinctChainSolver::kMod;
+                }
+            } else {
+                validCountUseAllSymbols += inclusionExclusionTerm;
+                if (validCountUseAllSymbols >= MinimumDistinctChainSolver::kMod) {
+                    validCountUseAllSymbols -= MinimumDistinctChainSolver::kMod;
+                }
+            }
+        }
+
+        const long long chooseBrightnessLevels = MinimumDistinctChainSolver::computeBinomialLargeNSmallK(
+            maxBrightness,
+            minimumDistinctRequired,
+            inverseFactorial
+        );
+
+        const long long answer =
+            chooseBrightnessLevels * validCountUseAllSymbols % MinimumDistinctChainSolver::kMod;
+
+        std::cout << answer << "\n";
+    }
+
+    return 0;
+}
+```
+
+**4. Code Explanation**
+
+- `computeMinimumDistinctRequired(pattern)` finds the longest contiguous run of identical inequality symbols and returns $d=\text{maxRun}+1$. This equals $c_{\min}$. If `maxBrightness < d`, the code prints `0`.
+
+- The count is computed as:
+  $$
+  \binom{K}{d}\cdot g(d)
+  $$
+  where $g(d)$ counts valid rank arrays using all ranks $1..d$.
+
+- `countValidRankArraysAllowUnused(pattern, alphabetSize)` computes $f(M)$ for a given $M=\text{alphabetSize}$ using a DP over last rank. Each transition uses a prefix sum for `"<"` or a suffix sum for `">"`, so each character of `pattern` is processed in $O(M)$ time.
+
+- Inclusion–exclusion is implemented by summing:
+  $$
+  g(d)=\sum_{missing=0}^{d}(-1)^{missing}\binom{d}{missing}f(d-missing)
+  $$
+  in `validCountUseAllSymbols`.
+
+- `computeBinomialLargeNSmallK(maxBrightness, d, inverseFactorial)` computes $\binom{K}{d}$ as a product of $d$ terms divided by $d!$ via modular inverse (safe because $10^9+7$ is prime and $K<10^9+7$).
+
+Example check for `n=1, K=3, s="<"`:
+- max run length is $1$, so $d=2$
+- $\binom{3}{2}=3$
+- exactly one rank pattern of length $2$ uses both ranks and satisfies `"<"`: $(1,2)$, so $g(2)=1$
+- answer is $3 \cdot 1 = 3$
+
+**5. Time and Space Complexity**
+
+Let $d=c_{\min} \le n+1$.
+
+- Computing all $f(1),\dots,f(d)$ costs:
+  $$
+  \sum_{M=1}^{d} O(nM)=O(nd^2)
+  $$
+- Inclusion–exclusion and binomial computation add $O(d)$.
+
+Per test case:
+- **Time:** $O(nd^2)$
+- **Space:** $O(d)$ for DP arrays and factorial tables.
+
+**6. Conclusion**
+
+The solution first derives the minimum required distinct count from the longest run in the inequality string. It then counts minimum-cost arrays by choosing $d$ distinct brightness values and counting valid rank patterns that use all ranks via inclusion–exclusion, with an efficient DP using prefix/suffix sums. This avoids any iteration over $K$ and runs comfortably within the constraints.

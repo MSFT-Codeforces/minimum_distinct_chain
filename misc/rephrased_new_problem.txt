@@ -1,0 +1,296 @@
+## Problem: The Clockmaker’s Lantern Chain
+
+In the city of Gearford, a clockmaker is building a decorative chain of **lanterns** along a corridor. There will be **\(n+1\)** lanterns in a row, numbered \(1\) to \(n+1\).
+
+Between lantern \(i\) and \(i+1\), the architect etched a symbol:
+
+- `'<‘` means lantern \(i+1\) must glow **strictly brighter** than lantern \(i\),
+- `'>'` means lantern \(i+1\) must glow **strictly dimmer** than lantern \(i\).
+
+Each lantern’s brightness is an integer from **1** to **\(K\)**.
+
+A brightness array \(a\) of length \(n+1\) is called **valid** if:
+
+- \(1 \le a_i \le K\) for all \(i\),
+- for every \(i=1..n\):
+  - if \(s_i = \texttt{<}\), then \(a_i < a_{i+1}\),
+  - if \(s_i = \texttt{>}\), then \(a_i > a_{i+1}\).
+
+The clockmaker wants to minimize the number of **different brightness levels** used in the whole chain.
+
+- The **cost** of an array is the number of **distinct** values appearing in it.
+- Let \(c_{\min}\) be the minimum possible cost among all valid arrays.
+
+For each test case, output:
+
+- the number of valid arrays whose cost equals \(c_{\min}\), modulo \(10^9+7\).
+- If no valid array exists, output **0**.
+
+---
+
+### Input Format
+- The first line contains an integer \(t\) — the number of test cases.
+- Each test case:
+  - one line with integers \(n, K\),
+  - one line with a string \(s\) of length \(n\) consisting only of `<` and `>`.
+
+### Output Format
+For each test case, print one integer — the required count modulo \(10^9+7\).
+
+### Constraints
+- \(1 \le t \le 40\)
+- \(1 \le n \le 250\)
+- \(1 \le K \le 10^9\) (and \(K < 10^9+7\))
+- \(s\) contains only `<` and `>`
+
+---
+
+### Sample Input
+```
+4
+1 3
+<
+2 3
+<<
+3 4
+<><
+3 1
+>>>
+```
+
+### Sample Output
+```
+3
+1
+6
+0
+```
+
+---
+
+## Editorial
+
+Let `MOD = 1e9+7`.
+
+### 1) What is the minimum possible cost?
+
+Look at consecutive identical symbols in `s`.
+
+- A run of `m` consecutive `<` forces a strictly increasing chain of length `m+1`, so those `m+1` values must all be distinct.
+- Same for a run of `m` consecutive `>` (strictly decreasing).
+
+Let `m = maximum length of a contiguous run of equal characters in s`.  
+Then every valid array must have at least `m+1` distinct values.
+
+It is also achievable (when \(K\) is large enough): the classic “relative ranks only matter” idea lets us compress any minimal unbounded solution into values `1..(m+1)`.
+
+So:
+
+- \(c_{\min} = d = m+1\).
+- If \(K < d\), then answer is **0**.
+
+---
+
+### 2) Separate “which brightness levels” from “how they are arranged”
+
+Any minimum-cost array uses **exactly \(d\)** distinct values from `1..K`.
+
+1. Choose which \(d\) brightness levels are used: \(\binom{K}{d}\) ways.
+2. Fix the chosen levels \(x_1 < x_2 < \dots < x_d\).  
+   Any valid array using exactly these levels corresponds to a **rank-array**
+   \(r\) over alphabet `{1..d}` where \(r_i=j \iff a_i = x_j\).
+
+Because constraints are only strict comparisons between neighbors, validity depends only on ranks, not actual values.
+
+Therefore:
+\[
+\text{answer} \equiv \binom{K}{d}\cdot g(d)\pmod{MOD}
+\]
+where \(g(d)\) is the number of valid rank-arrays over `{1..d}` that use **all** symbols `1..d` at least once.
+
+---
+
+### 3) Compute \(g(d)\) using inclusion–exclusion
+
+Let \(f(M)\) be the number of valid arrays over alphabet `{1..M}` (symbols may be unused).
+
+To count those that use all `d` symbols, exclude arrays missing at least one symbol:
+\[
+g(d)=\sum_{i=0}^{d}(-1)^i\binom{d}{i}\,f(d-i)
+\]
+(with \(f(0)=0\) since we cannot build a length \(n+1\) array from an empty alphabet).
+
+So we need \(f(1..d)\).
+
+---
+
+### 4) DP to compute \(f(M)\) in \(O(nM)\)
+
+Fix \(M\). Let `dp[v]` = number of ways for the current prefix where the last value equals `v` (1..M).
+
+Initialization (first lantern can be any value):
+- `dp[v] = 1` for all `v`.
+
+Transition for each character in `s`:
+
+- If it is `<`:
+  \[
+  ndp[v] = \sum_{u < v} dp[u]
+  \]
+- If it is `>`:
+  \[
+  ndp[v] = \sum_{u > v} dp[u]
+  \]
+
+Use prefix sums (for `<`) or suffix sums (for `>`) to compute `ndp` in `O(M)` per step.
+
+Finally:
+\[
+f(M)=\sum_{v=1}^{M}dp[v]
+\]
+
+We compute \(f(M)\) for all \(M=1..d\), total time:
+\[
+O\left(n\sum_{M=1}^{d} M\right)=O(nd^2)
+\]
+and \(d \le n+1 \le 251\), easily fast.
+
+---
+
+### 5) Compute \(\binom{K}{d}\) with large \(K\), small \(d\)
+
+Since \(K < MOD\) and \(d \le 251\):
+\[
+\binom{K}{d}=\frac{K(K-1)\cdots(K-d+1)}{d!}\pmod{MOD}
+\]
+Compute numerator directly and multiply by modular inverse of `d!`.
+
+---
+
+## Reference Implementation (C++17)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+static const long long MOD = 1000000007LL;
+
+long long mod_pow(long long a, long long e) {
+    long long r = 1 % MOD;
+    a %= MOD;
+    while (e > 0) {
+        if (e & 1) r = (r * a) % MOD;
+        a = (a * a) % MOD;
+        e >>= 1;
+    }
+    return r;
+}
+long long mod_inv(long long a) { return mod_pow(a, MOD - 2); }
+
+// f(M): number of valid arrays of length (s.size()+1) over values {1..M}
+long long countValidOverAlphabet(const string &s, int M) {
+    if (M <= 0) return 0;
+    vector<long long> dp(M + 1), ndp(M + 1);
+
+    for (int v = 1; v <= M; v++) dp[v] = 1; // first element
+
+    for (char c : s) {
+        if (c == '<') {
+            long long pref = 0;
+            for (int v = 1; v <= M; v++) {
+                ndp[v] = pref;                // sum_{u < v} dp[u]
+                pref += dp[v];
+                if (pref >= MOD) pref -= MOD;
+            }
+        } else { // '>'
+            long long suff = 0;
+            for (int v = M; v >= 1; v--) {
+                ndp[v] = suff;                // sum_{u > v} dp[u]
+                suff += dp[v];
+                if (suff >= MOD) suff -= MOD;
+            }
+        }
+        dp.swap(ndp);
+    }
+
+    long long total = 0;
+    for (int v = 1; v <= M; v++) {
+        total += dp[v];
+        if (total >= MOD) total -= MOD;
+    }
+    return total;
+}
+
+// C(n,k) mod MOD for n < MOD and small k, given invfact[k]
+long long nCk_largeN_smallK(long long n, int k, const vector<long long> &invfact) {
+    if (k < 0 || n < k) return 0;
+    long long num = 1;
+    for (int i = 0; i < k; i++) num = (num * (n - i)) % MOD;
+    return (num * invfact[k]) % MOD;
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        long long K;
+        cin >> n >> K;
+        string s;
+        cin >> s;
+
+        // d = (maximum run length in s) + 1
+        int bestRun = 1, cur = 1;
+        for (int i = 1; i < n; i++) {
+            if (s[i] == s[i - 1]) {
+                cur++;
+                bestRun = max(bestRun, cur);
+            } else cur = 1;
+        }
+        int d = bestRun + 1;
+
+        if (K < d) {
+            cout << 0 << "\n";
+            continue;
+        }
+
+        // factorials up to d for combinations inside mod
+        vector<long long> fact(d + 1), invfact(d + 1);
+        fact[0] = 1;
+        for (int i = 1; i <= d; i++) fact[i] = (fact[i - 1] * i) % MOD;
+        invfact[d] = mod_inv(fact[d]);
+        for (int i = d; i >= 1; i--) invfact[i - 1] = (invfact[i] * i) % MOD;
+
+        auto Cdi = [&](int i) -> long long {
+            // C(d, i)
+            return fact[d] * invfact[i] % MOD * invfact[d - i] % MOD;
+        };
+
+        // compute f(M) for M=1..d
+        vector<long long> f(d + 1, 0);
+        for (int M = 1; M <= d; M++) f[M] = countValidOverAlphabet(s, M);
+
+        // inclusion-exclusion to get g(d): must use all symbols 1..d
+        long long g = 0;
+        for (int i = 0; i <= d; i++) {
+            long long term = Cdi(i) * f[d - i] % MOD;
+            if (i & 1) {
+                g -= term;
+                if (g < 0) g += MOD;
+            } else {
+                g += term;
+                if (g >= MOD) g -= MOD;
+            }
+        }
+
+        long long chooseLevels = nCk_largeN_smallK(K, d, invfact);
+        long long ans = chooseLevels * g % MOD;
+        cout << ans << "\n";
+    }
+    return 0;
+}
+```
+

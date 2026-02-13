@@ -1,0 +1,66 @@
+
+You are an expert competitive programmer. 
+You will be provided with a problem statement, first analyze the problem, then provide your solution in C++. 
+Consider edge cases, time complexity, and space complexity. 
+Make sure your solution handles all constraints mentioned in the problem. 
+Your final solution should be a complete, compilable C++ program in a cpp codeblock.
+
+**Minimum Distinct Chain**
+
+You are given a row of $n+1$ lanterns, numbered from $1$ to $n+1$. Between lantern $i$ and $i+1$ there is a character $s_i$:
+
+- if $s_i = \texttt{<}$ then the brightness must satisfy $a_i < a_{i+1}$,
+- if $s_i = \texttt{>}$ then the brightness must satisfy $a_i > a_{i+1}$.
+
+You must assign an integer brightness array $a_1,a_2,\dots,a_{n+1}$ such that:
+
+- $1 \le a_i \le K$ for all $i$,
+- all adjacent comparisons follow the string $s$.
+
+Such an array is called **valid**.
+
+Define the **cost** of an array as the number of **distinct** values among $a_1,\dots,a_{n+1}$. Let $c_{\min}$ be the minimum possible cost over all valid arrays (if no valid array exists, ignore $c_{\min}$).
+
+For each test case, output the number of valid arrays whose cost equals $c_{\min}$, modulo $10^9+7$. If no valid array exists, output $0$.
+
+**Input Format:-**
+
+The first line contains an integer $t$ — the number of test cases.
+
+Each test case consists of:
+- one line containing two integers $n$ and $K$,
+- one line containing a string $s$ of length $n$ consisting only of characters `"<"` and `">"`.
+
+**Output Format:-**
+
+For each test case, print one integer — the number of valid arrays with minimum possible cost, modulo $10^9+7$.
+
+**Constraints:-**
+
+- $1 \le t \le 40$
+- $1 \le n \le 250$
+- $1 \le K \le 10^9$
+- $K < 10^9+7$
+- $|s| = n$, and $s_i \in \{\texttt{<},\texttt{>}\}$
+
+**Examples:-**
+ - **Input:**
+```
+4
+1 3
+<
+2 3
+<<
+3 4
+<><
+3 1
+>>>
+```
+
+ - **Output:**
+```
+3
+1
+6
+0
+```

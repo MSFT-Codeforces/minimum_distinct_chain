@@ -1,0 +1,9 @@
+# Metadata
+**Category:** - Coding
+**Topic:** - Competitive Programming
+**Subtopic:** - ["Dynamic Programming", "Algorithm Complexity and Big O Notation", "Arrays and Lists"]
+**Difficulty:** - Hard
+**Languages:** - C++
+**Number of Approaches:** - 5, ($O(nK^{n+1})$ -> $O(nK^2)$ -> $O(nK)$ -> $O(nd^3)$ -> $O(nd^2)$)
+**Number of Chains:** - 7
+**Model-Breaking:** - True

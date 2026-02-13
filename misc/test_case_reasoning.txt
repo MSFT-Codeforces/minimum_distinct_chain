@@ -1,0 +1,109 @@
+### Corrections / factual fixes to the earlier reasoning
+
+Two points needed tightening:
+
+1) **Minimum distinct cost \(c_{\min}\)** is not “max run length” but **(max consecutive run length of identical signs) + 1**.  
+   - Model each constraint as a directed edge “smaller \(\to\) larger”:  
+     - if \(s_i = \texttt{<}\): edge \(i \to i+1\)  
+     - if \(s_i = \texttt{>}\): edge \(i+1 \to i\)  
+   This graph is a directed path (acyclic), so it’s always feasible over unbounded integers.  
+   The minimum number of distinct integer values needed equals the **height** of this DAG = length (in vertices) of the **longest directed path**, which in a directed path is exactly **(longest block of consecutive identical signs) + 1**.  
+   Feasible within \([1..K]\) iff \(K \ge c_{\min}\).
+
+2) For a **perfectly alternating** inequality string (e.g. `<>><` is not; but `><><...` or `<><<` is not), the count of minimum-cost arrays is not just “close to” \(\binom{K}{2}\); it is **exactly \(\binom{K}{2}\)** (when \(K\ge 2\)), because the sequence is forced to alternate between the chosen low value and high value.
+
+Everything else in the reasoning is sound; below is the cleaned-up reasoning incorporating these corrections.
+
+---
+
+## What needs to be tested (reasoning only)
+
+This problem has two components per test case:
+
+- Determine feasibility and the minimum distinct count \(c_{\min}\).
+- Count valid arrays achieving exactly \(c_{\min}\), modulo \(10^9+7\).
+
+Since \(n\le 250\) but \(K\) can be \(10^9\), correct solutions typically do DP/combinatorics in \(n\) and treat \(K\) only via small-degree polynomial / falling-factorial terms.
+
+---
+
+## 1) Input range boundaries
+
+### Smallest sizes
+- **\(n=1\)** (2 lanterns): simplest chain; catches off-by-one between \(n\) signs and \(n+1\) values.
+- **\(K=1\)**: for any \(n\ge 1\), strict inequality is impossible ⇒ answer must be **0**. This catches DP base-case bugs.
+
+### Largest sizes
+- **\(n=250\)**: stresses time complexity (especially across \(t\le 40\)); catches \(O(n^4)\) or heavy recomputation.
+- **\(K\) near \(10^9\) / \(10^9+6\)** (still \(<\) mod): forces correct handling of huge \(K\) without precomputing factorials up to \(K\) and without 32-bit overflow.
+
+### Tight feasibility boundaries
+Use cases where:
+- \(K = c_{\min}-1\) ⇒ infeasible ⇒ output **0**.
+- \(K = c_{\min}\) ⇒ minimal slack; often simplifies combinatorial factors and exposes pure pattern-counting correctness.
+- \(K = c_{\min}+1\) ⇒ small slack; good for catching off-by-one in \(\binom{K}{c_{\min}}\)-like multipliers.
+
+---
+
+## 2) Structural edge cases in the string \(s\)
+
+Key fact to stress-test:  
+\[
+c_{\min} = (\text{maximum length of a consecutive run of identical characters in } s) + 1.
+\]
+
+### Monotone strings
+- **All ‘\<’** or **all ‘\>’**:
+  - Longest run length \(=n\) ⇒ \(c_{\min}=n+1\).
+  - Valid arrays are strictly monotone of length \(n+1\): count should match \(\binom{K}{n+1}\) (and be 0 if \(K<n+1\)).
+  - Great for verifying feasibility check and correct \(n\) vs \(n+1\).
+
+### Perfect alternation
+- Strings exactly like `<> <> <> ...` or `>< >< >< ...`:
+  - Longest run length \(=1\) ⇒ \(c_{\min}=2\) (for \(n\ge 1\)).
+  - Minimum-cost arrays must alternate between a low and a high value; count is **exactly** \(\binom{K}{2}\) when \(K\ge 2\).
+  - Excellent for catching wrong \(c_{\min}\), wrong direction handling, or wrong counting of “using exactly 2 distinct values”.
+
+### Mixed run blocks
+- Strings with several blocks, e.g. some long run(s) inside:
+  - Ensures \(c_{\min}\) computed as (max block length + 1), including when the max block is at the beginning/end.
+  - Useful for catching implementations that only check prefix/suffix or forget the +1.
+
+### Symmetry / reversal consistency
+- Pair tests where one is the reverse of the other with signs flipped (`<`↔`>`):
+  - Should preserve counts under the natural mirror mapping; breaks reveal indexing/sign interpretation bugs.
+
+### Patterns with multiple minimal-rank realizations
+- Choose \(s\) where \(c_{\min}\) is small (3–5) but the constraint graph allows multiple layerings/assignments achieving height \(c_{\min}\).
+  - Catches incorrect assumptions of uniqueness once \(c_{\min}\) is fixed.
+
+---
+
+## 3) Stress conditions / worst-case patterns
+
+- Many test cases with **\(n=250\)** to test total runtime and per-test reset correctness.
+- “Choppy” strings with frequent alternations plus occasional longer runs:
+  - Often worst for DP branching/state transitions.
+- Very large \(K\) with very small \(c_{\min}\) (e.g. alternating, so \(c_{\min}=2\)):
+  - Forces correct computation of small-\(m\) combinations like \(\binom{K}{2}\) under modulo with large operands.
+
+---
+
+## 4) Common implementation mistakes to target
+
+- **Off-by-one**: using \(n\) instead of \(n+1\) values; wrong interpretation of \(s_i\) indexing.
+- **Wrong \(c_{\min}\)**: forgetting the “+1”; missing max run at ends.
+- **Feasibility check**: not returning 0 when \(K<c_{\min}\); mishandling \(K=1\).
+- **Large \(K\) combinatorics**:
+  - attempting factorial precompute up to \(K\),
+  - overflow in products like \(K(K-1)\) before mod (must use 64-bit and mod-reduce).
+- **Counting “exactly \(c_{\min}\) distinct” vs “at most”**:
+  - some approaches accidentally include assignments that use fewer distinct values (should be impossible if \(c_{\min}\) is correct, but bugs can still count them).
+- **Sign direction mistakes** (`<`/`>` swapped) and reversal logic.
+
+---
+
+## 5) Invalid input
+Not needed: input is guaranteed to match constraints and contains only `<` and `>`.
+
+(Still no concrete test cases listed, per instruction.)

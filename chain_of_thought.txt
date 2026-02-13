@@ -1,0 +1,173 @@
+**[section_01]**
+Clarify the definitions and requirements.
+**[atomic_01_01]**
+Each test case provides integers $n$ and $K$ and a string $s$ of length $n$ consisting only of `"<"` and `">"`. The brightness array must have length $n+1$, corresponding to lanterns numbered $1$ through $n+1$.
+**[atomic_01_02]**
+Every lantern brightness $a_i$ must be an integer within the closed interval $[1,K]$. Even if inequalities can be satisfied, any value outside this range makes the entire array invalid.
+**[atomic_01_03]**
+The string $s$ enforces strict adjacent comparisons. For each position $i$ with $1 \le i \le n$:
+- if $s_i=\texttt{<}$ then $a_i<a_{i+1}$,
+- if $s_i=\texttt{>}$ then $a_i>a_{i+1}$.
+No equality is allowed between adjacent lanterns.
+**[atomic_01_04]**
+An array is valid if it satisfies all range constraints and all $n$ strict inequalities. If any single inequality fails, the whole array is invalid; there is no partial credit or relaxation.
+**[atomic_01_05]**
+The cost of an array is defined as the number of distinct integer values appearing among $a_1,\dots,a_{n+1}$. For example, $[2,5,2,5]$ has cost $2$, and $[1,2,3]$ has cost $3$.
+**[atomic_01_06]**
+Among all valid arrays, $c_{\min}$ is the minimum achievable cost. The task is not to output $c_{\min}$ itself, but to count how many valid arrays attain this minimum cost.
+**[atomic_01_07]**
+For each test case, the output is the number of valid arrays with cost exactly $c_{\min}$, taken modulo $10^9+7$. If no valid array exists for the test case, the required output is $0$.
+
+---
+
+**[section_02]**
+Enumerate edge cases and sanity tests to validate outputs.
+**[atomic_02_01]**
+Smallest-length behavior: when $n=1$, the array has length $2$ and exactly one strict comparison. This checks that strict inequality (not non-strict) is applied and that the array length is handled correctly as $n+1$.
+**[atomic_02_02]**
+All-`"<"` or all-`">"` strings create a fully monotone constraint across all $n+1$ elements. These cases test whether strict monotonicity is handled and reveal feasibility issues when $K$ is too small to provide enough distinct values.
+**[atomic_02_03]**
+Alternating patterns such as $s=\texttt{<><><>}$ stress local constraint handling because the sequence must go up and down repeatedly. These cases are good for detecting mistaken assumptions like global monotonicity or accidental reuse of invalid equalities.
+**[atomic_02_04]**
+Extreme bound $K=1$: for any $n \ge 1$, strict inequalities make it impossible to build a valid array, so the answer must be $0$. This is a strong feasibility test that is easy to reason about.
+**[atomic_02_05]**
+Mixed runs like $s=\texttt{<<><>>>}$ are important because long contiguous runs impose strong local distinctness requirements, while the rest of the string may allow repetition. Such cases catch off-by-one mistakes in interpreting how many positions a run affects.
+**[atomic_02_06]**
+Large $K$ near $10^9$ checks arithmetic robustness: products like $K(K-1)\cdots$ become large and must be reduced modulo $10^9+7$ correctly. These tests also ensure the solution remains correct when many numeric choices exist.
+**[atomic_02_07]**
+Modulo edge checks: results may require subtracting terms (for example, from alternating sums), so it is helpful to test scenarios where intermediate values would go negative before modular normalization. This validates that the final printed value always lies in $[0,10^9+6]$.
+
+---
+
+**[section_03]**
+Try brute force enumeration and observe why it fails.
+**[atomic_03_01]**
+A direct attempt is to enumerate every array $a$ of length $n+1$ with entries in $[1,K]$. For each enumerated array, we check the $n$ inequalities from $s$ to decide validity.
+**[atomic_03_02]**
+For each valid array, we compute its cost by counting distinct values across all positions, track the smallest cost encountered, and count how many arrays achieve that smallest cost. This matches the problem definition exactly, making it conceptually straightforward.
+**[atomic_03_03]**
+The number of candidate arrays is $K^{n+1}$. Even if validity checking and distinct counting were optimized, the enumeration itself dominates, so runtime grows exponentially in $n$.
+**[atomic_03_04]**
+Given $n$ can be up to $250$, even tiny $K$ values produce astronomically many arrays. This makes the approach infeasible for all but trivial cases and unusable under the constraints.
+**[atomic_03_05]**
+This failure indicates we must count combinatorially rather than enumerate explicitly, and we need an approach that avoids exponential dependence on $n$.
+
+Time complexity: $O(nK^{n+1})$ time, $O(n)$ or $O(1)$ auxiliary space (excluding enumeration storage).
+
+---
+
+**[section_04]**
+Count valid arrays with a value-based DP and identify memory/time limitations.
+**[atomic_04_01]**
+A natural next attempt is dynamic programming by last value. Let $\text{dp}[i][v]$ be the number of valid prefixes of length $i$ ending with value $v$, where $1 \le v \le K$ and $1 \le i \le n+1$. The final number of valid arrays (ignoring the minimum-cost requirement) would be $\sum_{v=1}^{K}\text{dp}[n+1][v]$.
+**[atomic_04_02]**
+Transitions follow strict inequalities. If the next symbol is `"<"`, then the next value must be larger:
+$$
+\text{dp}[i+1][v]=\sum_{u=1}^{v-1}\text{dp}[i][u].
+$$
+If the next symbol is `">"`, then:
+$$
+\text{dp}[i+1][v]=\sum_{u=v+1}^{K}\text{dp}[i][u].
+$$
+**[atomic_04_03]**
+Computing each transition sum naively costs $O(K)$ per target $v$, so one DP layer update costs $O(K^2)$. Across $n$ transitions, total runtime becomes $O(nK^2)$.
+**[atomic_04_04]**
+This approach fails for two reasons: (1) $K$ can be as large as $10^9$, so storing even a single layer of size $K$ is impossible, and (2) $O(nK^2)$ operations are far beyond any feasible limit.
+**[atomic_04_05]**
+Even before integrating the “minimum number of distinct values” objective, the basic feasibility of this DP collapses under the constraints. We must avoid any algorithm that allocates or iterates over $1..K$.
+
+Time complexity: $O(nK^2)$ time, $O(K)$ memory with rolling arrays.
+
+---
+
+**[section_05]**
+Optimize the value-based DP with prefix sums and realize it is still too large.
+**[atomic_05_01]**
+We can improve the previous DP by noting that transitions are prefix sums or suffix sums. For `"<"`, each next state is a prefix sum of the previous states; for `">"`, it is a suffix sum.
+**[atomic_05_02]**
+With a running prefix sum, all $\text{dp}[i+1][v]$ for a `"<"` step can be computed in a single sweep over $v=1..K$. Similarly, a running suffix sum computes a `">"` step in one sweep over $v=K..1$.
+**[atomic_05_03]**
+This reduces each layer update to $O(K)$ time, so the DP becomes $O(nK)$ time and $O(K)$ memory (using rolling arrays). This is a strict improvement over $O(nK^2)$.
+**[atomic_05_04]**
+However, the constraints still make this impossible: $K$ can be $10^9$, so an $O(K)$ array cannot be stored, and $O(nK)$ operations are far too many. Additionally, since $K$ is provided as a number (not as a list of values), $O(K)$ work is not polynomial in the input length measured as $O(n+\log K)$.
+**[atomic_05_05]**
+This failure forces a shift in perspective: the strict comparisons depend on relative ordering rather than the absolute magnitudes of values in $[1,K]$. Any viable solution must avoid linear dependence on $K$.
+
+Time complexity: $O(nK)$ time, $O(K)$ memory.
+
+---
+
+**[section_06]**
+Reformulate the task using ranks and compute counts with a slow polynomial method.
+**[atomic_06_01]**
+To minimize the number of distinct brightness levels, we first need to understand the minimum possible distinct count forced by the string $s$. A contiguous run of $m$ identical symbols (`"<"` or `">"`) forces a strictly monotone sequence of length $m+1$, which must contain $m+1$ distinct values.
+**[atomic_06_02]**
+Let $m$ be the maximum length of any contiguous run of identical characters in $s$, and define $d=m+1$. Then every valid array must use at least $d$ distinct values, so $c_{\min}=d$. If $K<d$, it is impossible to realize $d$ distinct values within $[1,K]$, so the answer is immediately $0$.
+**[atomic_06_03]**
+Assuming $K \ge d$, any minimum-cost array uses exactly $d$ distinct values. If we choose those $d$ brightness levels and sort them as $x_1<x_2<\dots<x_d$, then any valid array using exactly these values corresponds to a rank array $r$ where $r_i=j$ means $a_i=x_j$. Validity depends only on comparisons of neighbors, so it depends only on ranks, not the specific numeric choices of $x_j$.
+**[atomic_06_04]**
+This splits the counting into two independent parts:
+1) choose which $d$ distinct brightness levels are used: $\binom{K}{d}$ ways,
+2) count rank arrays over alphabet $\{1,\dots,d\}$ that satisfy $s$ and use all ranks at least once.
+The second part is purely combinatorial in $n$ and $d$.
+**[atomic_06_05]**
+To enforce “all ranks are used” without tracking subsets explicitly, we introduce $f(M)$ = the number of valid rank arrays over alphabet $\{1,\dots,M\}$ where symbols may be unused. Then the number that uses all $d$ symbols is obtained by inclusion–exclusion:
+$$
+g(d)=\sum_{i=0}^{d}(-1)^i\binom{d}{i} f(d-i).
+$$
+A direct “track used symbols” DP would be exponential in $d$ and is discarded as infeasible.
+**[atomic_06_06]**
+A first implementation attempt for $f(M)$ uses a DP over the last rank, but computes each transition sum naively. For a fixed $M$, for each of the $n$ steps and each target rank $v$, summing over all smaller (or larger) previous ranks costs $O(M)$, leading to $O(nM^2)$ time per $M$.
+**[atomic_06_07]**
+Because inclusion–exclusion needs $f(1),f(2),\dots,f(d)$, total time becomes
+$$
+O\left(\sum_{M=1}^{d} nM^2\right)=O(nd^3)=O(n^4),
+$$
+since $d \le n+1$. This is polynomial and removes dependence on $K$, which is a major improvement over $O(nK)$, but $O(n^4)$ is still too slow in practice for $n \approx 250$.
+
+Time complexity: $O(nd^3)$ time, $O(d)$ memory (per $M$ with rolling arrays).
+
+---
+
+**[section_07]**
+Optimize the rank-DP transitions and complete the counting efficiently.
+**[atomic_07_01]**
+We keep the rank-based structure from the previous section (compute $d$, then $\binom{K}{d}$, then $g(d)$ via inclusion–exclusion) and focus on accelerating the computation of all $f(M)$ values.
+**[atomic_07_02]**
+For a fixed alphabet size $M$, define a 1D DP over the last rank: $\text{dp}[v]$ is the number of ways to build the current prefix ending at rank $v$ ($1 \le v \le M$). Initially, before processing any character of $s$, the first rank can be any value, so $\text{dp}[v]=1$ for all $v$.
+**[atomic_07_03]**
+For each character in $s$, we update $\text{dp}$ to $\text{ndp}$:
+- if the character is `"<"`, then $\text{ndp}[v]=\sum_{u<v}\text{dp}[u]$,
+- if it is `">"`, then $\text{ndp}[v]=\sum_{u>v}\text{dp}[u]$.
+All computations are done modulo $10^9+7$.
+**[atomic_07_04]**
+The key optimization is to compute these sums with a single sweep:
+- For `"<"`, maintain a running prefix sum while scanning $v=1..M$, so each $\text{ndp}[v]$ is obtained in $O(1)$ amortized time.
+- For `">"`, maintain a running suffix sum while scanning $v=M..1$.
+This reduces one step update from $O(M^2)$ to $O(M)$.
+**[atomic_07_05]**
+With this optimization, computing $f(M)$ takes $O(nM)$ time. Computing all $f(1..d)$ takes
+$$
+O\left(\sum_{M=1}^{d} nM\right)=O(nd^2)=O(n^3),
+$$
+since $d \le n+1 \le 251$. This is a strict improvement over the previous section’s $O(nd^3)=O(n^4)$.
+**[atomic_07_06]**
+After obtaining all $f(M)$, we compute
+$$
+g(d)=\sum_{i=0}^{d}(-1)^i\binom{d}{i} f(d-i)
+$$
+carefully under modulo arithmetic, ensuring subtraction is normalized back into $[0,\text{MOD}-1]$. We also treat $f(0)=0$ (no symbols cannot form a positive-length array).
+**[atomic_07_07]**
+We compute $\binom{K}{d} \bmod \text{MOD}$ using the multiplicative formula with a small factorial:
+$$
+\binom{K}{d}=\frac{K(K-1)\cdots(K-d+1)}{d!}\pmod{\text{MOD}}.
+$$
+Because $d \le 251$, we can precompute $d!$ and its modular inverse; because $K<\text{MOD}$, the numerator product terms are well-defined modulo $\text{MOD}$.
+**[atomic_07_08]**
+The final answer per test case is
+$$
+\text{ans}=\binom{K}{d}\cdot g(d)\bmod \text{MOD},
+$$
+with an early output of $0$ if $K<d$. This completes the solution with manageable time and memory while correctly counting only minimum-cost valid arrays.
+
+Time complexity: $O(nd^2)$ time and $O(d)$ memory per test case (plus $O(d)$ precomputations), where $d \le n+1$.

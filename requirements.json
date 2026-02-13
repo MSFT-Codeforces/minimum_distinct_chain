@@ -1,0 +1,14 @@
+{
+  "original": "https://www.codeforces.com/problemset/problem/1837/B",
+  "title": "Minimum Distinct Chain",
+  "tags": [
+    "Dynamic Programming",
+    "Algorithm Complexity and Big O Notation",
+    "Arrays and Lists"
+  ],
+  "model_breaking": true,
+  "time": 1,
+  "space": 32,
+  "new_colab_link": "https://colab.research.google.com/drive/1uvHQzhsm5XiyOIGx3VFTGbzE76lRwKgx",
+  "github_link": "https://github.com/MSFT-Codeforces/minimum_distinct_chain"
+}

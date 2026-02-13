@@ -1,0 +1,278 @@
+## Problem: Count Minimum‑Cost Compatible Arrays
+
+You are given a string \(s\) of length \(n\), consisting only of characters `<` and `>`, and an integer \(K\).
+
+An array \(a\) of length \(n+1\) is **compatible** with \(s\) if:
+
+- \(1 \le a_i \le K\) for all \(i\),
+- for every \(i=1..n\):
+  - if \(s_i=\texttt{<}\), then \(a_i < a_{i+1}\),
+  - if \(s_i=\texttt{>}\), then \(a_i > a_{i+1}\).
+
+The **cost** of an array is the number of **distinct** values appearing in it.
+
+For each test case:
+
+1. Let \(c_{\min}\) be the minimum possible cost among all compatible arrays.
+2. Output the number of compatible arrays whose cost equals \(c_{\min}\), modulo \(10^9+7\).
+
+If no compatible array exists, output \(0\).
+
+---
+
+### Input Format
+The first line contains an integer \(t\) — the number of test cases.
+
+Each test case consists of:
+- one line with two integers \(n, K\),
+- one line with a string \(s\) of length \(n\).
+
+---
+
+### Output Format
+For each test case output one integer — the required count modulo \(10^9+7\).
+
+---
+
+### Constraints
+- \(1 \le t \le 40\)
+- \(1 \le n \le 250\)
+- \(1 \le K \le 10^9\)  (so \(K < 10^9+7\))
+- \(s\) contains only `<` and `>`
+
+---
+
+## Editorial
+
+Let \(MOD = 10^9+7\).
+
+### 1) Minimum possible cost \(c_{\min}\)
+
+Consider a maximal contiguous run of equal characters in \(s\).
+
+- If there is a run of \(m\) consecutive `<`, then for the corresponding \(m+1\) positions in \(a\):
+  \[
+  a_i < a_{i+1} < \dots < a_{i+m}
+  \]
+  so these \(m+1\) values must be all distinct.
+- Similarly for a run of \(m\) consecutive `>`.
+
+Let \(m\) be the maximum run length in \(s\). Then any compatible array has cost at least \(m+1\).
+
+Moreover, this lower bound is achievable using exactly \(m+1\) distinct values whenever \(K \ge m+1\): take any compatible array with minimum cost in the unbounded setting (it is known to exist), then replace its distinct values by their ranks \(1,2,\dots,m+1\). All strict comparisons between adjacent elements are preserved, so the resulting array lies in \([1..m+1]\).
+
+Therefore:
+- \(c_{\min} = m+1\),
+- if \(K < c_{\min}\), then no such array exists and the answer is \(0\).
+
+Let \(d = c_{\min}\) below.
+
+---
+
+### 2) Separate “which values are used” from the pattern
+
+Any array with cost \(d\) uses exactly \(d\) distinct values from \([1..K]\).
+Choose those values: \(\binom{K}{d}\) ways.
+
+Fix a chosen sorted set \(\{x_1 < x_2 < \dots < x_d\}\).
+Every compatible array that uses exactly these values corresponds bijectively to a **rank array** \(r\) over alphabet \(\{1..d\}\) by mapping \(r_i=j \iff a_i = x_j\).
+Because comparisons are strict, compatibility depends only on the relative order, hence the mapping preserves compatibility.
+
+So:
+\[
+\text{answer} \equiv \binom{K}{d} \cdot g(d) \pmod{MOD},
+\]
+where \(g(d)\) is the number of compatible rank arrays over \(\{1..d\}\) that use **all** \(d\) symbols at least once.
+
+---
+
+### 3) Compute \(g(d)\) by inclusion–exclusion
+
+Let \(f(M)\) be the number of compatible arrays over alphabet \(\{1..M\}\) (not necessarily using all values).
+
+For a fixed subset of size \(M\) of \(\{1..d\}\), the number of compatible arrays using only that subset equals \(f(M)\) (relabel the subset increasingly to \(1..M\)).
+
+Thus, by inclusion–exclusion over missing symbols:
+\[
+g(d) = \sum_{i=0}^{d} (-1)^i \binom{d}{i}\, f(d-i),
+\]
+with \(f(0)=0\) here because arrays have positive length.
+
+So we just need \(f(1), f(2), \dots, f(d)\).
+
+---
+
+### 4) DP for \(f(M)\) in \(O(nM)\)
+
+For fixed \(M\), use DP on the last value.
+
+Let \(dp[v]\) be the number of ways to build a prefix ending with value \(v\) (where \(1 \le v \le M\)).
+
+Initialization (first element can be anything):
+- \(dp[v]=1\) for all \(v\).
+
+Transition for each character \(c = s_i\):
+- If \(c=\texttt{<}\):
+  \[
+  ndp[v] = \sum_{u < v} dp[u]
+  \]
+- If \(c=\texttt{>}\):
+  \[
+  ndp[v] = \sum_{u > v} dp[u]
+  \]
+
+Compute these sums with prefix/suffix sums in \(O(M)\) per character, hence \(O(nM)\).
+Then:
+\[
+f(M) = \sum_{v=1}^{M} dp[v].
+\]
+
+We compute \(f(M)\) for all \(M=1..d\) in total time \(O\!\left(n \sum_{M=1}^d M\right)=O(nd^2)\), with \(d \le n+1 \le 251\).
+
+---
+
+### 5) Computing \(\binom{K}{d}\) for large \(K\) and small \(d\)
+
+Since \(K < MOD\) and \(d \le 251\), we use:
+\[
+\binom{K}{d} = \frac{K(K-1)\cdots(K-d+1)}{d!} \pmod{MOD}
+\]
+using modular inverses of \(d!\).
+
+---
+
+## Reference Implementation (C++17)
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+static const long long MOD = 1000000007LL;
+
+long long mod_pow(long long a, long long e) {
+    long long r = 1 % MOD;
+    a %= MOD;
+    while (e > 0) {
+        if (e & 1) r = (r * a) % MOD;
+        a = (a * a) % MOD;
+        e >>= 1;
+    }
+    return r;
+}
+
+long long mod_inv(long long a) {
+    return mod_pow(a, MOD - 2);
+}
+
+// Count compatible arrays of length (|s|+1) over values {1..M}
+long long countCompatible(const string &s, int M) {
+    if (M <= 0) return 0;
+    vector<long long> dp(M + 1), ndp(M + 1);
+
+    for (int v = 1; v <= M; v++) dp[v] = 1; // first element
+
+    for (char c : s) {
+        if (c == '<') {
+            long long pref = 0;
+            for (int v = 1; v <= M; v++) {
+                ndp[v] = pref;              // sum_{u < v} dp[u]
+                pref += dp[v];
+                if (pref >= MOD) pref -= MOD;
+            }
+        } else { // '>'
+            long long suff = 0;
+            for (int v = M; v >= 1; v--) {
+                ndp[v] = suff;              // sum_{u > v} dp[u]
+                suff += dp[v];
+                if (suff >= MOD) suff -= MOD;
+            }
+        }
+        dp.swap(ndp);
+    }
+
+    long long total = 0;
+    for (int v = 1; v <= M; v++) {
+        total += dp[v];
+        if (total >= MOD) total -= MOD;
+    }
+    return total;
+}
+
+// Compute C(n,k) mod MOD for n < MOD and small k, using invfact[k]
+long long nCk_largeN_smallK(long long n, int k, const vector<long long>& invfact) {
+    if (k < 0 || n < k) return 0;
+    long long num = 1;
+    for (int i = 0; i < k; i++) {
+        num = (num * (n - i)) % MOD;
+    }
+    return (num * invfact[k]) % MOD;
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int t;
+    cin >> t;
+    while (t--) {
+        int n;
+        long long K;
+        cin >> n >> K;
+        string s;
+        cin >> s;
+
+        // d = (maximum run length in s) + 1
+        int m = 1, cur = 1;
+        for (int i = 1; i < n; i++) {
+            if (s[i] == s[i - 1]) {
+                cur++;
+                m = max(m, cur);
+            } else {
+                cur = 1;
+            }
+        }
+        int d = m + 1;
+
+        if (K < d) {
+            cout << 0 << "\n";
+            continue;
+        }
+
+        // Precompute factorials and inverse factorials up to d
+        vector<long long> fact(d + 1), invfact(d + 1);
+        fact[0] = 1;
+        for (int i = 1; i <= d; i++) fact[i] = (fact[i - 1] * i) % MOD;
+        invfact[d] = mod_inv(fact[d]);
+        for (int i = d; i >= 1; i--) invfact[i - 1] = (invfact[i] * i) % MOD;
+
+        auto Cdi = [&](int i) -> long long {
+            // C(d, i)
+            return (((fact[d] * invfact[i]) % MOD) * invfact[d - i]) % MOD;
+        };
+
+        // f[M] for M=0..d (f[0]=0)
+        vector<long long> f(d + 1, 0);
+        for (int M = 1; M <= d; M++) {
+            f[M] = countCompatible(s, M);
+        }
+
+        // g(d) = number of compatible arrays over {1..d} using all symbols
+        long long g = 0;
+        for (int i = 0; i <= d; i++) {
+            long long term = (Cdi(i) * f[d - i]) % MOD;
+            if (i & 1) {
+                g -= term;
+                if (g < 0) g += MOD;
+            } else {
+                g += term;
+                if (g >= MOD) g -= MOD;
+            }
+        }
+
+        long long choose = nCk_largeN_smallK(K, d, invfact);
+        long long ans = (choose * g) % MOD;
+        cout << ans << "\n";
+    }
+    return 0;
+}
+```

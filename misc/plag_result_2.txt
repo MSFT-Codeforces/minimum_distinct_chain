@@ -1,0 +1,9 @@
+- AtCoder Educational DP Contest — **T: Permutation** ([atcoder.jp](https://atcoder.jp/contests/dp/tasks/dp_t?utm_source=openai))  
+```text
+https://atcoder.jp/contests/dp/tasks/dp_t
+```
+
+- LeetCode — **903: Valid Permutations for DI Sequence** ([leetcode.com](https://leetcode.com/problems/valid-permutations-for-di-sequence/))  
+```text
+https://leetcode.com/problems/valid-permutations-for-di-sequence/
+```
