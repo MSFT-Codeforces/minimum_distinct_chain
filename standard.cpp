@@ -172,7 +172,7 @@ int main() {
     int testCaseCount = 0;
     std::cin >> testCaseCount;
 
-    while (testCaseCount-- > 0) {
+    for (int testCaseIndex = 0; testCaseIndex < testCaseCount; ++testCaseIndex) {
         int patternLength = 0;
         long long maxBrightness = 0;
         std::cin >> patternLength >> maxBrightness;
@@ -187,7 +187,8 @@ int main() {
         const int minimumDistinctRequired = MinimumDistinctChainSolver::computeMinimumDistinctRequired(pattern);
 
         if (maxBrightness < minimumDistinctRequired) {
-            std::cout << 0 << "\n";
+            std::cout << 0;
+            if (testCaseIndex != testCaseCount - 1) std::cout << "\n";
             continue;
         }
 
@@ -236,8 +237,8 @@ int main() {
         const long long answer =
             chooseBrightnessLevels * validCountUseAllSymbols % MinimumDistinctChainSolver::kMod;
 
-        std::cout << answer << "\n";
-    }
+            std::cout << answer;
+            if (testCaseIndex != testCaseCount - 1) std::cout << "\n";    }
 
     return 0;
 }

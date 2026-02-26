@@ -97,14 +97,15 @@ int main() {
     cin >> t;
 
     BruteSolver solver;
-    while (t--) {
+    for (int testCaseIndex = 0; testCaseIndex < t; testCaseIndex++) {
         int n;
         long long k;
         string s;
         cin >> n >> k;
         cin >> s;
 
-        cout << solver.solveOne(n, k, s) << "\n";
+        cout << solver.solveOne(n, k, s);
+        if (testCaseIndex != t - 1) cout << "\n";
     }
 
     return 0;
