@@ -1,7 +1,7 @@
 **[section_01]**
 Clarify the definitions and requirements.
 **[atomic_01_01]**
-Each test case provides integers $n$ and $K$ and a string $s$ of length $n$ consisting only of `"<"` and `">"`. The brightness array must have length $n+1$, corresponding to lanterns numbered $1$ through $n+1$.
+Each test case provides integers $n$ and $K$ and a string $s$ of length $n$ consisting only of $\texttt{"<"}$ and $\texttt{">"}$. The brightness array must have length $n+1$, corresponding to lanterns numbered $1$ through $n+1$.
 **[atomic_01_02]**
 Every lantern brightness $a_i$ must be an integer within the closed interval $[1,K]$. Even if inequalities can be satisfied, any value outside this range makes the entire array invalid.
 **[atomic_01_03]**
@@ -21,21 +21,34 @@ For each test case, the output is the number of valid arrays with cost exactly $
 ---
 
 **[section_02]**
-Enumerate edge cases and sanity tests to validate outputs.
+Analyze the provided sample test cases and reason about useful edge cases.
 **[atomic_02_01]**
-Smallest-length behavior: when $n=1$, the array has length $2$ and exactly one strict comparison. This checks that strict inequality (not non-strict) is applied and that the array length is handled correctly as $n+1$.
+The first example provides $n=8$, $K=3$, $s="><>><<>>"$. To analyze this, we first identify the consecutive runs: $>$ (length $1$), $<$ (length $1$), $>>$ (length $2$), $<<$ (length $2$), $>>$ (length $2$). The maximum run length is $2$. A run of $m$ identical characters forces a strictly monotone sequence of $m+1$ consecutive elements, requiring $m+1$ distinct values. So the minimum distinct count is
+$$
+d=2+1=3.
+$$
+
+Since $K=3=d$, the value set is uniquely determined as $\{1,2,3\}$ and the count depends entirely on how many valid rank assignments exist.
+
+This reveals an important structural insight: the problem decomposes into choosing which $d$ values from $[1,K]$ to use (a binomial coefficient) and counting valid rank patterns that use all chosen values. Here $\binom{3}{3}=1$, so the answer equals the number of valid rank patterns, which is $3$.
 **[atomic_02_02]**
-All-`"<"` or all-`">"` strings create a fully monotone constraint across all $n+1$ elements. These cases test whether strict monotonicity is handled and reveal feasibility issues when $K$ is too small to provide enough distinct values.
+The second example has four test cases probing different regimes. The first ($n=1$, $K=1$, $s=">"$) is the simplest infeasibility check: $a_1>a_2$ is impossible when both values must be $1$.
+
+This confirms that the solution handles $K<d$ (here $d=2>1=K$) by outputting $0$, and also validates that the array length is correctly interpreted as $n+1=2$, not $n$.
 **[atomic_02_03]**
-Alternating patterns such as $s=\texttt{<><><>}$ stress local constraint handling because the sequence must go up and down repeatedly. These cases are good for detecting mistaken assumptions like global monotonicity or accidental reuse of invalid equalities.
+The second test case ($n=3$, $K=4$, $s=">>>"$) has a single run of length $3$, giving $d=4$. With $K=4=d$, the only possible value set is $\{1,2,3,4\}$ and the strict decreasing constraint pins the unique array $(4,3,2,1)$. This tests the boundary case where $K$ exactly equals $d$ and the monotone constraint is so strong that only one rank pattern exists ($g(d)=1$), making the answer $\binom{4}{4}\cdot 1=1$.
 **[atomic_02_04]**
-Extreme bound $K=1$: for any $n \ge 1$, strict inequalities make it impossible to build a valid array, so the answer must be $0$. This is a strong feasibility test that is easy to reason about.
+The third test case ($n=4$, $K=2$, $s="<><>"$) has an alternating pattern where every run has length $1$, so $d=2$. With $K=2$, the values $\{1,2\}$ are forced. The alternating constraints $a_1<a_2>a_3<a_4>a_5$ pin each odd-indexed position to $1$ and each even-indexed position to $2$, yielding the unique array $(1,2,1,2,1)$. This tests whether the solution correctly handles rapid direction changes and identifies that alternation still permits a small minimum distinct count.
 **[atomic_02_05]**
-Mixed runs like $s=\texttt{<<><>>>}$ are important because long contiguous runs impose strong local distinctness requirements, while the rest of the string may allow repetition. Such cases catch off-by-one mistakes in interpreting how many positions a run affects.
+The fourth test case ($n=6$, $K=3$, $s="><<>>>"$) contains runs of lengths $1$, $2$, and $3$. The maximum run length $3$ gives $d=4$, but $K=3<4$, so no valid array exists. This tests infeasibility caused by an insufficient range rather than by $K=1$. The distinction matters because a solution that only checks $K<2$ as a special case would miss this. It also demonstrates that the relevant bottleneck is the longest run, not the total pattern length.
 **[atomic_02_06]**
-Large $K$ near $10^9$ checks arithmetic robustness: products like $K(K-1)\cdots$ become large and must be reduced modulo $10^9+7$ correctly. These tests also ensure the solution remains correct when many numeric choices exist.
+To explore beyond the provided examples, consider $n=2$, $K=3$, $s="<>"$. The maximum run length is $1$, so $d=2$ and $\binom{3}{2}=3$ choices of value pairs. For any pair $\{x_1,x_2\}$ with $x_1<x_2$, the constraints $a_1<a_2>a_3$ force $a_2=x_2$ (the peak must be the larger value) and both $a_1,a_3$ must be less than $a_2$, so $a_1=a_3=x_1$. Only one rank pattern works, giving $g(2)=1$ and an answer of $3\cdot 1=3$. This reveals that peaks and valleys tightly constrain rank assignments even in short patterns.
 **[atomic_02_07]**
-Modulo edge checks: results may require subtracting terms (for example, from alternating sums), so it is helpful to test scenarios where intermediate values would go negative before modular normalization. This validates that the final printed value always lies in $[0,10^9+6]$.
+Another instructive case is $n=3$, $K=5$, $s="<<>"$. The run structure is $<<$ (length $2$) then $>$ (length $1$), giving $d=3$ and $\binom{5}{3}=10$ value choices. For any chosen triple $\{x_1<x_2<x_3\}$, the constraints $a_1<a_2<a_3>a_4$ force the first three positions to the unique increasing assignment $(x_1,x_2,x_3)$, while $a_4$ only needs $a_4<a_3=x_3$. Since $a_4$ must come from $\{x_1,x_2,x_3\}$ and be strictly less than $x_3$, we have $a_4 \in \{x_1,x_2\}$, giving $2$ valid rank patterns. So $g(3)=2$ and the answer is $10\cdot 2=20$. This demonstrates that monotone runs fix most positions while boundary positions may retain some freedom.
+**[atomic_02_08]**
+For stress-testing modular arithmetic, consider $n=1$, $K=10^9$, $s="<"$. Here $d=2$ and the answer is $\binom{10^9}{2}\cdot g(2)$. Since $10^9 \equiv -7\pmod{10^9+7}$ and $10^9-1\equiv -8\pmod{10^9+7}$, the product is $(-7)(-8)=56$ and dividing by $2$ gives $28$. The rank pattern count is $g(2)=1$, so the answer is $28$.
+
+This tests that the binomial coefficient is computed correctly using modular inverses when $K$ is large. More broadly, whenever $K=1$, any strict inequality is impossible, so the answer is always $0$. When the entire string is a single character repeated $n$ times, $d=n+1$ and the unique monotone rank pattern gives $g(n+1)=1$, so the answer is $\binom{K}{n+1}$ (or $0$ if $K<n+1$).
 
 ---
 
@@ -52,7 +65,7 @@ Given $n$ can be up to $250$, even tiny $K$ values produce astronomically many a
 **[atomic_03_05]**
 This failure indicates we must count combinatorially rather than enumerate explicitly, and we need an approach that avoids exponential dependence on $n$.
 
-Time complexity: $O(nK^{n+1})$ time, $O(n)$ or $O(1)$ auxiliary space (excluding enumeration storage).
+Time complexity: $O(n)$ to read input; $O(nK^{n+1})$ to enumerate all $K^{n+1}$ candidate arrays and validate each in $O(n)$ time. Overall $O(nK^{n+1})$ time, $O(n)$ auxiliary space.
 
 ---
 
@@ -61,11 +74,11 @@ Count valid arrays with a value-based DP and identify memory/time limitations.
 **[atomic_04_01]**
 A natural next attempt is dynamic programming by last value. Let $\text{dp}[i][v]$ be the number of valid prefixes of length $i$ ending with value $v$, where $1 \le v \le K$ and $1 \le i \le n+1$. The final number of valid arrays (ignoring the minimum-cost requirement) would be $\sum_{v=1}^{K}\text{dp}[n+1][v]$.
 **[atomic_04_02]**
-Transitions follow strict inequalities. If the next symbol is `"<"`, then the next value must be larger:
+Transitions follow strict inequalities. If the next symbol is $\texttt{"<"}$, then the next value must be larger:
 $$
 \text{dp}[i+1][v]=\sum_{u=1}^{v-1}\text{dp}[i][u].
 $$
-If the next symbol is `">"`, then:
+If the next symbol is $\texttt{">"}$, then:
 $$
 \text{dp}[i+1][v]=\sum_{u=v+1}^{K}\text{dp}[i][u].
 $$
@@ -74,18 +87,18 @@ Computing each transition sum naively costs $O(K)$ per target $v$, so one DP lay
 **[atomic_04_04]**
 This approach fails for two reasons: (1) $K$ can be as large as $10^9$, so storing even a single layer of size $K$ is impossible, and (2) $O(nK^2)$ operations are far beyond any feasible limit.
 **[atomic_04_05]**
-Even before integrating the “minimum number of distinct values” objective, the basic feasibility of this DP collapses under the constraints. We must avoid any algorithm that allocates or iterates over $1..K$.
+Even before integrating the “minimum number of distinct values” objective, the basic feasibility of this DP collapses under the constraints. We must avoid any algorithm that allocates or iterates over $\{1, \ldots, K\}$.
 
-Time complexity: $O(nK^2)$ time, $O(K)$ memory with rolling arrays.
+Time complexity: $O(n)$ to read input; $O(K)$ to initialize the DP table; $O(nK^2)$ for $n$ transition steps each filling $K$ states at $O(K)$ per state. Overall $O(nK^2)$ time, $O(K)$ memory with rolling arrays.
 
 ---
 
 **[section_05]**
 Optimize the value-based DP with prefix sums and realize it is still too large.
 **[atomic_05_01]**
-We can improve the previous DP by noting that transitions are prefix sums or suffix sums. For `"<"`, each next state is a prefix sum of the previous states; for `">"`, it is a suffix sum.
+We can improve the previous DP by noting that transitions are prefix sums or suffix sums. For $\texttt{"<"}$, each next state is a prefix sum of the previous states; for $\texttt{">"}$, it is a suffix sum.
 **[atomic_05_02]**
-With a running prefix sum, all $\text{dp}[i+1][v]$ for a `"<"` step can be computed in a single sweep over $v=1..K$. Similarly, a running suffix sum computes a `">"` step in one sweep over $v=K..1$.
+With a running prefix sum, all $\text{dp}[i+1][v]$ for a $\texttt{"<"}$ step can be computed in a single sweep over $v=1,2,\ldots,K$. Similarly, a running suffix sum computes a $\texttt{">"}$ step in one sweep over $v=K,K-1,\ldots,1$.
 **[atomic_05_03]**
 This reduces each layer update to $O(K)$ time, so the DP becomes $O(nK)$ time and $O(K)$ memory (using rolling arrays). This is a strict improvement over $O(nK^2)$.
 **[atomic_05_04]**
@@ -93,14 +106,14 @@ However, the constraints still make this impossible: $K$ can be $10^9$, so an $O
 **[atomic_05_05]**
 This failure forces a shift in perspective: the strict comparisons depend on relative ordering rather than the absolute magnitudes of values in $[1,K]$. Any viable solution must avoid linear dependence on $K$.
 
-Time complexity: $O(nK)$ time, $O(K)$ memory.
+Time complexity: $O(n)$ to read input; $O(K)$ to initialize the DP table; $O(nK)$ for $n$ transition steps each sweeping $K$ states in $O(K)$ via prefix/suffix sums. Overall $O(nK)$ time, $O(K)$ memory.
 
 ---
 
 **[section_06]**
 Reformulate the task using ranks and compute counts with a slow polynomial method.
 **[atomic_06_01]**
-To minimize the number of distinct brightness levels, we first need to understand the minimum possible distinct count forced by the string $s$. A contiguous run of $m$ identical symbols (`"<"` or `">"`) forces a strictly monotone sequence of length $m+1$, which must contain $m+1$ distinct values.
+To minimize the number of distinct brightness levels, we first need to understand the minimum possible distinct count forced by the string $s$. A contiguous run of $m$ identical symbols ($\texttt{"<"}$ or $\texttt{">"}$) forces a strictly monotone sequence of length $m+1$, which must contain $m+1$ distinct values.
 **[atomic_06_02]**
 Let $m$ be the maximum length of any contiguous run of identical characters in $s$, and define $d=m+1$. Then every valid array must use at least $d$ distinct values, so $c_{\min}=d$. If $K<d$, it is impossible to realize $d$ distinct values within $[1,K]$, so the answer is immediately $0$.
 **[atomic_06_03]**
@@ -125,7 +138,7 @@ O\left(\sum_{M=1}^{d} nM^2\right)=O(nd^3)=O(n^4),
 $$
 since $d \le n+1$. This is polynomial and removes dependence on $K$, which is a major improvement over $O(nK)$, but $O(n^4)$ is still too slow in practice for $n \approx 250$.
 
-Time complexity: $O(nd^3)$ time, $O(d)$ memory (per $M$ with rolling arrays).
+Time complexity: $O(n)$ to read input and compute $d$ (scan $s$ for the longest run); $O(d)$ to build factorial and inverse-factorial tables (including one $O(\log p)$ modular exponentiation where $p=10^9+7$); $\sum_{M=1}^{d} O(nM^2)=O(nd^3)$ to compute all $f(M)$ values; $O(d)$ for inclusion–exclusion and $\binom{K}{d}$. Overall $O(nd^3)$ time per test case, $O(d)$ memory.
 
 ---
 
@@ -137,16 +150,16 @@ We keep the rank-based structure from the previous section (compute $d$, then $\
 For a fixed alphabet size $M$, define a 1D DP over the last rank: $\text{dp}[v]$ is the number of ways to build the current prefix ending at rank $v$ ($1 \le v \le M$). Initially, before processing any character of $s$, the first rank can be any value, so $\text{dp}[v]=1$ for all $v$.
 **[atomic_07_03]**
 For each character in $s$, we update $\text{dp}$ to $\text{ndp}$:
-- if the character is `"<"`, then $\text{ndp}[v]=\sum_{u<v}\text{dp}[u]$,
-- if it is `">"`, then $\text{ndp}[v]=\sum_{u>v}\text{dp}[u]$.
+- if the character is $\texttt{"<"}$, then $\text{ndp}[v]=\sum_{u<v}\text{dp}[u]$,
+- if it is $\texttt{">"}$, then $\text{ndp}[v]=\sum_{u>v}\text{dp}[u]$.
 All computations are done modulo $10^9+7$.
 **[atomic_07_04]**
 The key optimization is to compute these sums with a single sweep:
-- For `"<"`, maintain a running prefix sum while scanning $v=1..M$, so each $\text{ndp}[v]$ is obtained in $O(1)$ amortized time.
-- For `">"`, maintain a running suffix sum while scanning $v=M..1$.
+- For $\texttt{"<"}$, maintain a running prefix sum while scanning $v=1,2,\ldots,M$, so each $\text{ndp}[v]$ is obtained in $O(1)$ amortized time.
+- For $\texttt{">"}$, maintain a running suffix sum while scanning $v=M,M-1,\ldots,1$.
 This reduces one step update from $O(M^2)$ to $O(M)$.
 **[atomic_07_05]**
-With this optimization, computing $f(M)$ takes $O(nM)$ time. Computing all $f(1..d)$ takes
+With this optimization, computing $f(M)$ takes $O(nM)$ time. Computing all $f(1),f(2),\ldots,f(d)$ takes
 $$
 O\left(\sum_{M=1}^{d} nM\right)=O(nd^2)=O(n^3),
 $$
@@ -170,4 +183,4 @@ $$
 $$
 with an early output of $0$ if $K<d$. This completes the solution with manageable time and memory while correctly counting only minimum-cost valid arrays.
 
-Time complexity: $O(nd^2)$ time and $O(d)$ memory per test case (plus $O(d)$ precomputations), where $d \le n+1$.
+Time complexity: $O(n)$ to read input and compute $d$ (scan $s$ for the longest run); $O(d)$ to build factorial and inverse-factorial tables (including one $O(\log p)$ modular exponentiation where $p=10^9+7$); $\sum_{M=1}^{d} O(nM)=O(nd^2)$ to compute all $f(M)$ values; $O(d)$ for inclusion–exclusion and $\binom{K}{d}$. Overall $O(nd^2)$ time and $O(d)$ memory per test case, where $d \le n+1$.

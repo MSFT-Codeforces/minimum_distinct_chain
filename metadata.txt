@@ -7,3 +7,4 @@
 **Number of Approaches:** - 5, ($O(nK^{n+1})$ -> $O(nK^2)$ -> $O(nK)$ -> $O(nd^3)$ -> $O(nd^2)$)
 **Number of Chains:** - 7
 **Model-Breaking:** - True
+**GitHub:** - https://github.com/MSFT-Codeforces/minimum_distinct_chain

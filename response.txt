@@ -8,7 +8,7 @@ For each test case, we must count integer arrays $a_1,a_2,\dots,a_{n+1}$ with $1
 The **cost** of an array is the number of distinct values appearing in it. Let $c_{\min}$ be the minimum cost among all valid arrays. The task is to output the number of valid arrays with cost exactly $c_{\min}$ modulo $10^9+7$ (or $0$ if no valid array exists).
 
 Key observation for $c_{\min}$:
-- A run of $m$ consecutive `"<"` forces a strictly increasing segment of length $m+1$, hence at least $m+1$ distinct values (same for `">"`).
+- A run of $m$ consecutive $\texttt{"<"}$ forces a strictly increasing segment of length $m+1$, hence at least $m+1$ distinct values (same for $\texttt{">"}$).
 - Let $m$ be the maximum run length in $s$. Then $c_{\min}=d=m+1$.
 - If $K<d$, it is impossible to realize $d$ distinct values in $[1,K]$, so the answer is $0$.
 
@@ -38,8 +38,8 @@ g(d)=\sum_{missing=0}^{d}(-1)^{missing}\binom{d}{missing}f(d-missing)
 $$
 with $f(0)=0$.
 
-**Step 4: Compute each $f(M)$ with DP in $O(nM)$**
-For fixed $M$, maintain `waysEndingWithRank[rank]` for the current prefix, and update using prefix sums for `"<"` and suffix sums for `">"`. This gives $f(M)$ in $O(nM)$, and computing all $f(1..d)$ takes $O(nd^2)$.
+**Step 4: Compute each $f(M)$ with DP**
+For fixed $M$, maintain `waysEndingWithRank[rank]` for the current prefix, and update using prefix sums for $\texttt{"<"}$ and suffix sums for $\texttt{">"}$. This gives $f(M)$ for each $M \in \{1, 2, \ldots, d\}$.
 
 **Step 5: Compute $\binom{K}{d}$ for large $K$, small $d$**
 Since $K<10^9+7$ and $d \le 251$:
@@ -226,7 +226,7 @@ int main() {
     int testCaseCount = 0;
     std::cin >> testCaseCount;
 
-    while (testCaseCount-- > 0) {
+    for (int testCaseIndex = 0; testCaseIndex < testCaseCount; ++testCaseIndex) {
         int patternLength = 0;
         long long maxBrightness = 0;
         std::cin >> patternLength >> maxBrightness;
@@ -241,7 +241,8 @@ int main() {
         const int minimumDistinctRequired = MinimumDistinctChainSolver::computeMinimumDistinctRequired(pattern);
 
         if (maxBrightness < minimumDistinctRequired) {
-            std::cout << 0 << "\n";
+            std::cout << 0;
+            if (testCaseIndex != testCaseCount - 1) std::cout << "\n";
             continue;
         }
 
@@ -290,11 +291,12 @@ int main() {
         const long long answer =
             chooseBrightnessLevels * validCountUseAllSymbols % MinimumDistinctChainSolver::kMod;
 
-        std::cout << answer << "\n";
-    }
+            std::cout << answer;
+            if (testCaseIndex != testCaseCount - 1) std::cout << "\n";    }
 
     return 0;
 }
+
 ```
 
 **4. Code Explanation**
@@ -305,9 +307,9 @@ int main() {
   $$
   \binom{K}{d}\cdot g(d)
   $$
-  where $g(d)$ counts valid rank arrays using all ranks $1..d$.
+  where $g(d)$ counts valid rank arrays using all ranks $\{1, \ldots, d\}$.
 
-- `countValidRankArraysAllowUnused(pattern, alphabetSize)` computes $f(M)$ for a given $M=\text{alphabetSize}$ using a DP over last rank. Each transition uses a prefix sum for `"<"` or a suffix sum for `">"`, so each character of `pattern` is processed in $O(M)$ time.
+- `countValidRankArraysAllowUnused(pattern, alphabetSize)` computes $f(M)$ for a given $M=\text{alphabetSize}$ using a DP over last rank. Each transition uses a prefix sum for $\texttt{"<"}$ or a suffix sum for $\texttt{">"}$, so each character of `pattern` is processed in $O(M)$ time.
 
 - Inclusion–exclusion is implemented by summing:
   $$
@@ -317,24 +319,31 @@ int main() {
 
 - `computeBinomialLargeNSmallK(maxBrightness, d, inverseFactorial)` computes $\binom{K}{d}$ as a product of $d$ terms divided by $d!$ via modular inverse (safe because $10^9+7$ is prime and $K<10^9+7$).
 
-Example check for `n=1, K=3, s="<"`:
+Example execution for Example 1 ($n=8$, $K=3$, $s="><>><<>>"$):
+- The runs are $>$ (1), $<$ (1), $>>$ (2), $<<$ (2), $>>$ (2); maximum run length is $2$, so $d=3$.
+- Since $K=3=d$, we have $\binom{3}{3}=1$ way to choose the value set $\{1,2,3\}$.
+- The DP computes $f(1), f(2), f(3)$ via `countValidRankArraysAllowUnused`. Inclusion–exclusion yields $g(3)=3$.
+- Answer: $\binom{3}{3}\cdot 3 = 1 \cdot 3 = 3$.
+
+Simple verification ($n=1$, $K=3$, $s=\texttt{"<"}$):
 - max run length is $1$, so $d=2$
 - $\binom{3}{2}=3$
-- exactly one rank pattern of length $2$ uses both ranks and satisfies `"<"`: $(1,2)$, so $g(2)=1$
+- exactly one rank pattern of length $2$ uses both ranks and satisfies $\texttt{"<"}$: $(1,2)$, so $g(2)=1$
 - answer is $3 \cdot 1 = 3$
 
 **5. Time and Space Complexity**
 
 Let $d=c_{\min} \le n+1$.
 
-- Computing all $f(1),\dots,f(d)$ costs:
-  $$
-  \sum_{M=1}^{d} O(nM)=O(nd^2)
-  $$
-- Inclusion–exclusion and binomial computation add $O(d)$.
+Per test case, the breakdown is:
+- $O(n)$ to read input and compute $d$ (scanning $s$ for the longest run of identical characters).
+- $O(d)$ to build factorial and inverse-factorial tables (including one $O(\log p)$ modular exponentiation, where $p=10^9+7$).
+- $\sum_{M=1}^{d} O(nM)=O(nd^2)$ to compute all $f(1),\dots,f(d)$ via the rank DP with prefix/suffix sums.
+- $O(d)$ for inclusion–exclusion to obtain $g(d)$.
+- $O(d)$ for the binomial coefficient $\binom{K}{d}$ via the multiplicative formula.
 
-Per test case:
-- **Time:** $O(nd^2)$
+Totals per test case:
+- **Time:** $O(nd^2)$ (all other terms are dominated since $d \ge 2$ implies $nd^2 \ge n$).
 - **Space:** $O(d)$ for DP arrays and factorial tables.
 
 **6. Conclusion**
