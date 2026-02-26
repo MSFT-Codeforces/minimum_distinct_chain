@@ -23,24 +23,26 @@ For each test case, the output is the number of valid arrays with cost exactly $
 **[section_02]**
 Analyze the provided sample test cases and reason about useful edge cases.
 **[atomic_02_01]**
-The first example provides $n=8$, $K=3$, $s="><>><<>>"$. To analyze this, we first identify the consecutive runs: $>$ (length $1$), $<$ (length $1$), $>>$ (length $2$), $<<$ (length $2$), $>>$ (length $2$). The maximum run length is $2$. A run of $m$ identical characters forces a strictly monotone sequence of $m+1$ consecutive elements, requiring $m+1$ distinct values. So the minimum distinct count is
+The first example provides $n=8$, $K=3$, $s="><>><<>>"$. To analyze this, we first identify the consecutive runs: $>$ (length $1$), $<$ (length $1$), $>>$ (length $2$), $<<$ (length $2$), $>>$ (length $2$). The maximum run length is $2$. A run of $m$ identical characters forces a strictly monotone sequence of $m+1$ consecutive elements, requiring $m+1$ distinct values. Since the endpoint of each run also serves as the start of the adjacent run, direction changes allow monotone segments to share boundary values without demanding additional distinct levels beyond what the longest run requires. In this example, the longest run has length $2$, which by itself forces $3$ distinct values. No pairing of shorter runs demands more. The minimum distinct count is therefore
 $$
 d=2+1=3.
 $$
 
 Since $K=3=d$, the value set is uniquely determined as $\{1,2,3\}$ and the count depends entirely on how many valid rank assignments exist.
 
-This reveals an important structural insight: the problem decomposes into choosing which $d$ values from $[1,K]$ to use (a binomial coefficient) and counting valid rank patterns that use all chosen values. Here $\binom{3}{3}=1$, so the answer equals the number of valid rank patterns, which is $3$.
+This observation suggests a counting decomposition: choosing which $d$ values from $[1,K]$ to use (a binomial coefficient) and counting valid rank patterns that use all chosen values. Here $\binom{3}{3}=1$, so the answer equals the number of valid rank patterns, which is $3$.
 **[atomic_02_02]**
 The second example has four test cases probing different regimes. The first ($n=1$, $K=1$, $s=">"$) is the simplest infeasibility check: $a_1>a_2$ is impossible when both values must be $1$.
 
 This confirms that the solution handles $K<d$ (here $d=2>1=K$) by outputting $0$, and also validates that the array length is correctly interpreted as $n+1=2$, not $n$.
+
+This corner case does not invalidate the structural decomposition identified above, but it establishes a necessary feasibility precondition: any approach must verify $K \ge d$ before attempting to count arrays.
 **[atomic_02_03]**
 The second test case ($n=3$, $K=4$, $s=">>>"$) has a single run of length $3$, giving $d=4$. With $K=4=d$, the only possible value set is $\{1,2,3,4\}$ and the strict decreasing constraint pins the unique array $(4,3,2,1)$. This tests the boundary case where $K$ exactly equals $d$ and the monotone constraint is so strong that only one rank pattern exists ($g(d)=1$), making the answer $\binom{4}{4}\cdot 1=1$.
 **[atomic_02_04]**
 The third test case ($n=4$, $K=2$, $s="<><>"$) has an alternating pattern where every run has length $1$, so $d=2$. With $K=2$, the values $\{1,2\}$ are forced. The alternating constraints $a_1<a_2>a_3<a_4>a_5$ pin each odd-indexed position to $1$ and each even-indexed position to $2$, yielding the unique array $(1,2,1,2,1)$. This tests whether the solution correctly handles rapid direction changes and identifies that alternation still permits a small minimum distinct count.
 **[atomic_02_05]**
-The fourth test case ($n=6$, $K=3$, $s="><<>>>"$) contains runs of lengths $1$, $2$, and $3$. The maximum run length $3$ gives $d=4$, but $K=3<4$, so no valid array exists. This tests infeasibility caused by an insufficient range rather than by $K=1$. The distinction matters because a solution that only checks $K<2$ as a special case would miss this. It also demonstrates that the relevant bottleneck is the longest run, not the total pattern length.
+The fourth test case ($n=6$, $K=3$, $s="><<>>>"$) contains runs of lengths $1$, $2$, and $3$. The maximum run length $3$ gives $d=4$, but $K=3<4$, so no valid array exists. This tests infeasibility caused by an insufficient range rather than by $K=1$. The distinction matters because a solution that only checks $K<2$ as a special case would miss this. It also demonstrates that the relevant bottleneck is the longest run, not the total pattern length. No revision of the structural reasoning from earlier chains is needed; the feasibility check $K \ge d$ correctly handles this case as a pre-computation step in any approach.
 **[atomic_02_06]**
 To explore beyond the provided examples, consider $n=2$, $K=3$, $s="<>"$. The maximum run length is $1$, so $d=2$ and $\binom{3}{2}=3$ choices of value pairs. For any pair $\{x_1,x_2\}$ with $x_1<x_2$, the constraints $a_1<a_2>a_3$ force $a_2=x_2$ (the peak must be the larger value) and both $a_1,a_3$ must be less than $a_2$, so $a_1=a_3=x_1$. Only one rank pattern works, giving $g(2)=1$ and an answer of $3\cdot 1=3$. This reveals that peaks and valleys tightly constrain rank assignments even in short patterns.
 **[atomic_02_07]**
@@ -94,7 +96,7 @@ Time complexity: $O(n)$ to read input; $O(K)$ to initialize the DP table; $O(nK^
 ---
 
 **[section_05]**
-Optimize the value-based DP with prefix sums and realize it is still too large.
+Explore prefix-sum optimization of the value-based DP.
 **[atomic_05_01]**
 We can improve the previous DP by noting that transitions are prefix sums or suffix sums. For $\texttt{"<"}$, each next state is a prefix sum of the previous states; for $\texttt{">"}$, it is a suffix sum.
 **[atomic_05_02]**
@@ -111,11 +113,11 @@ Time complexity: $O(n)$ to read input; $O(K)$ to initialize the DP table; $O(nK)
 ---
 
 **[section_06]**
-Reformulate the task using ranks and compute counts with a slow polynomial method.
+Reformulate the task using ranks and investigate polynomial-time counting.
 **[atomic_06_01]**
 To minimize the number of distinct brightness levels, we first need to understand the minimum possible distinct count forced by the string $s$. A contiguous run of $m$ identical symbols ($\texttt{"<"}$ or $\texttt{">"}$) forces a strictly monotone sequence of length $m+1$, which must contain $m+1$ distinct values.
 **[atomic_06_02]**
-Let $m$ be the maximum length of any contiguous run of identical characters in $s$, and define $d=m+1$. Then every valid array must use at least $d$ distinct values, so $c_{\min}=d$. If $K<d$, it is impossible to realize $d$ distinct values within $[1,K]$, so the answer is immediately $0$.
+Let $m$ be the maximum length of any contiguous run of identical characters in $s$, and define $d=m+1$. A strictly monotone sequence of length $m+1$ necessarily contains $m+1$ distinct values, so any valid array requires at least $d$ distinct values. To see that $d$ values also suffice, consider mapping each position to a rank in $\{1,\dots,d\}$ by greedily assigning the locally-forced ordering within each maximal run. At direction changes (where the symbol flips), the boundary position is a local extremum whose rank can be chosen from values already used in the adjacent segment. This construction achieves exactly $d$ distinct values, confirming that $c_{\min}=d$. If $K<d$, it is impossible to realize $d$ distinct values within $[1,K]$, so the answer is immediately $0$.
 **[atomic_06_03]**
 Assuming $K \ge d$, any minimum-cost array uses exactly $d$ distinct values. If we choose those $d$ brightness levels and sort them as $x_1<x_2<\dots<x_d$, then any valid array using exactly these values corresponds to a rank array $r$ where $r_i=j$ means $a_i=x_j$. Validity depends only on comparisons of neighbors, so it depends only on ranks, not the specific numeric choices of $x_j$.
 **[atomic_06_04]**
@@ -143,7 +145,7 @@ Time complexity: $O(n)$ to read input and compute $d$ (scan $s$ for the longest 
 ---
 
 **[section_07]**
-Optimize the rank-DP transitions and complete the counting efficiently.
+Investigate faster rank-DP transitions using prefix and suffix sums.
 **[atomic_07_01]**
 We keep the rank-based structure from the previous section (compute $d$, then $\binom{K}{d}$, then $g(d)$ via inclusion–exclusion) and focus on accelerating the computation of all $f(M)$ values.
 **[atomic_07_02]**

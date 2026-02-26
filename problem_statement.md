@@ -75,6 +75,8 @@ For each test case, print one integer — the number of valid arrays with minimu
 ```
 
 **Note:-**  
+A contiguous run of $m$ identical characters forces a strictly monotone subarray of length $m+1$, requiring at least $m+1$ distinct values. Conversely, $m+1$ values always suffice: within each maximal monotone segment, assign ranks from a pool of $m+1$ values, and at direction changes the boundary position can reuse a value from the adjacent segment. Therefore $c_{\min}$ equals one plus the maximum run length in $s$; when $K < c_{\min}$, no valid array exists.
+
 In the first example, $s=\texttt{"><>><<>>"}$ has maximum consecutive run length $2$ (for example $\texttt{">>"}$ and $\texttt{"<<"}$), so $$c_{\min}=2+1=3.$$ Since $K=3$, we must use exactly the values $\{1,2,3\}$. The forced parts are:
 - from $a_3>a_4>a_5$ we get $(a_3,a_4,a_5)=(3,2,1)$,
 - since $a_5=1$, from $a_5<a_6<a_7$ we get $(a_6,a_7)=(2,3)$,
